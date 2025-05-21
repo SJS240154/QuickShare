@@ -13,21 +13,24 @@
 ## 安装步骤
 
 1. 安装依赖：
+
 ```bash
 pip install -r requirements.txt
 ```
 
 2. 运行应用：
+
 ```bash
 python app.py
 ```
 
 3. 访问系统：
-- 在本机访问：http://localhost:5000
-- 在局域网其他设备访问：http://[本机IP地址]:5000
+
+- 在本机访问：http://localhost
+- 在局域网其他设备访问：http://[本机IP地址]
 
 ## 注意事项
 
 - 请确保运行服务器的计算机和访问的计算机在同一个局域网内
-- 默认端口为5000，如需修改请编辑app.py文件
-- 上传的文件将保存在uploads目录中 
+- 默认端口为80，如需修改请编辑app.py文件
+- 上传的文件将保存在uploads目录中
