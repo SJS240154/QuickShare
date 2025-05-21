@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>局域网文件传输</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .file-list {
+            margin-top: 20px;
+        }
+        .upload-form {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .speed-test {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .speed-result {
+            margin-top: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .custom-file-input {
+                width: 100%;
+            }
+            .file-info {
+                margin-top: 10px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">局域网文件传输系统</h1>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-info">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="speed-test">
+            <h3>网络速度测试</h3>
+            <button id="testSpeed" class="btn btn-primary">开始测速</button>
+            <div id="speedResult" class="speed-result"></div>
+        </div>
+
+        <div class="upload-form">
+            <h3>上传文件</h3>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <input type="file" class="form-control custom-file-input" name="files[]" multiple required>
+                    <div class="file-info">
+                        <small class="text-muted d-none d-md-block">按住Ctrl键可以选择多个文件</small>
+                        <small class="text-muted d-md-none">iOS设备：点击选择多个文件</small>
+                        <small class="text-muted d-md-none">安卓设备：长按文件可多选</small>
+                    </div>
+                </div>
+                <div id="selectedFiles" class="mb-3"></div>
+                <div class="progress mb-3 d-none" id="uploadProgress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div id="uploadStatus" class="mb-3"></div>
+                <button type="submit" class="btn btn-primary">上传</button>
+            </form>
+        </div>
+
+        <div class="file-list">
+            <h3>文件列表</h3>
+            {% if files %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>文件名</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr>
+                        <td>{{ file }}</td>
+                        <td>
+                            <a href="/download/{{ file }}" class="btn btn-primary download-btn">下载</a>
+                            <a href="{{ url_for('delete_file', filename=file) }}" class="btn btn-danger btn-sm"
+                                onclick="return confirm('确定要删除这个文件吗？')">删除</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-center">暂无文件</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('testSpeed').addEventListener('click', async function() {
+            const button = this;
+            const resultDiv = document.getElementById('speedResult');
+            
+            button.disabled = true;
+            resultDiv.textContent = '测试中...';
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch('/speed_test', {method: 'POST'});
+                const blob = await response.blob();
+                const endTime = performance.now();
+                
+                const elapsedTime = (endTime - startTime) / 1000;
+                const speedMbps = (blob.size) / (elapsedTime * 1000 * 1000);
+                
+                resultDiv.textContent = `测速结果: ${speedMbps.toFixed(2)} MB/s`;
+            } catch (error) {
+                resultDiv.textContent = '测速失败，请重试';
+                console.error('测速错误:', error);
+            } finally {
+                button.disabled = false;
+            }
+        });
+        
+        document.querySelectorAll('.download-btn').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                const url = this.href;
+                const startTime = performance.now();
+                
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('下载失败');
+                    
+                    const blob = await response.blob();
+                    const endTime = performance.now();
+                    const elapsedTime = (endTime - startTime) / 1000;
+                    const speed = (blob.size / elapsedTime / (1024 * 1024)).toFixed(2);
+                    
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = url.split('/').pop();
+                    a.click();
+                    
+                    alert(`下载完成！速度: ${speed} MB/s`);
+                } catch (error) {
+                    alert(error.message);
+                }
+            });
+        });
+
+        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+            const fileList = e.target.files;
+            const selectedFilesDiv = document.getElementById('selectedFiles');
+            
+            if (fileList.length > 0) {
+                let fileNames = `已选择 ${fileList.length} 个文件: `;
+                for (let i = 0; i < Math.min(fileList.length, 3); i++) {
+                    fileNames += fileList[i].name + (i < Math.min(fileList.length, 3) - 1 ? ', ' : '');
+                }
+                
+                if (fileList.length > 3) {
+                    fileNames += ` 等${fileList.length}个文件`;
+                }
+                
+                selectedFilesDiv.textContent = fileNames;
+                selectedFilesDiv.classList.add('alert', 'alert-info');
+            } else {
+                selectedFilesDiv.textContent = '';
+                selectedFilesDiv.classList.remove('alert', 'alert-info');
+            }
+        });
+    
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const fileInput = this.querySelector('input[type="file"]');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                alert('请选择文件');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('start_time', Date.now() / 1000);
+            
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files[]', files[i]);
+            }
+            
+            const progressBar = document.querySelector('#uploadProgress .progress-bar');
+            const progressContainer = document.getElementById('uploadProgress');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const submitButton = this.querySelector('button[type="submit"]');
+            
+            progressContainer.classList.remove('d-none');
+            submitButton.disabled = true;
+            uploadStatus.innerHTML = '<div class="alert alert-info">文件上传中...</div>';
+            
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                    progressBar.textContent = Math.round(percentComplete) + '%';
+                }
+            });
+            
+            xhr.addEventListener('load', function() {
+                if (xhr.status === 200) {
+                    uploadStatus.innerHTML = '<div class="alert alert-success">上传成功！正在刷新页面...</div>';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    uploadStatus.innerHTML = '<div class="alert alert-danger">上传失败，请重试</div>';
+                    submitButton.disabled = false;
+                }
+            });
+            
+            xhr.addEventListener('error', function() {
+                uploadStatus.innerHTML = '<div class="alert alert-danger">上传出错，请检查网络连接</div>';
+                submitButton.disabled = false;
+            });
+            
+            xhr.open('POST', '{{ url_for("upload_file") }}', true);
+            xhr.send(formData);
+        });
+    </script>
+</body>
+</html>
