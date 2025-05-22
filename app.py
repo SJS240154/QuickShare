@@ -38,6 +38,7 @@ def show_qr_gui(url):
         img = qr.make_image(fill='black', back_color='white')
 
         tk_img = ImageTk.PhotoImage(img)
+
         label = tk.Label(root, image=tk_img)
         label.pack()
 
@@ -76,10 +77,11 @@ def upload_file():
         uploaded_files = []
 
         for file in files:
-            if file and allowed_file(file.filename):
+            if file and file.filename:
                 filename = secure_filename(file.filename)
-                file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
-                uploaded_files.append(filename)
+                if filename:
+                    file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+                    uploaded_files.append(filename)
 
         server_end_time = time.time()
         total_elapsed_time = server_end_time - client_start_time
@@ -112,21 +114,19 @@ def download_file(filename):
             raise FileNotFoundError(f"文件 {filename} 不存在")
             
         file_size = os.path.getsize(file_path)
-
-        def calculate_speed():
+        response = send_file(file_path, as_attachment=True)
+        
+        @response.call_on_close
+        def on_close():
             server_end_time = time.time()
-            server_elapsed_time = server_end_time - server_start_time
             total_elapsed_time = server_end_time - client_start_time
             
             if total_elapsed_time < 0.1:
                 total_elapsed_time = 0.1
                 
             download_speed = file_size / total_elapsed_time / (1024 * 1024)
-            return min(download_speed, 300)
-
-        response = send_file(file_path, as_attachment=True)
-        
-        response.speed = calculate_speed()
+            app.logger.info(f"下载速度: {min(download_speed, 300):.2f} MB/s")
+            
         return response
 
     except Exception as e:
