@@ -1,11 +1,10 @@
 import os
 import time
-import webbrowser
 import socket
 from flask import Flask, request, render_template, send_file, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
 import qrcode
-from PIL import Image, ImageTk
+from PIL import ImageTk
 import threading
 import tkinter as tk
 
@@ -27,15 +26,8 @@ def get_local_ip():
     except Exception:
         return "127.0.0.1"
 
-# 全局变量，用于标记是否已显示二维码
-qr_window_shown = False
 
 def show_qr_gui(url):
-    global qr_window_shown
-    if qr_window_shown:
-        return
-    qr_window_shown = True
-
     def create_window():
         root = tk.Tk()
         root.title("服务器访问地址")
@@ -121,7 +113,6 @@ def download_file(filename):
             
         file_size = os.path.getsize(file_path)
 
-        # 计算速度并存储在变量中
         def calculate_speed():
             server_end_time = time.time()
             server_elapsed_time = server_end_time - server_start_time
@@ -135,7 +126,6 @@ def download_file(filename):
 
         response = send_file(file_path, as_attachment=True)
         
-        # 将速度信息存储在response对象中
         response.speed = calculate_speed()
         return response
 
@@ -158,7 +148,7 @@ def delete_file(filename):
 @app.route("/speed_test", methods=["POST"])
 def speed_test():
     try:
-        test_size = 50 * 1024 * 1024
+        test_size = 100 * 1024 * 1024
         test_data = os.urandom(test_size)
         
         start_time = time.time()
