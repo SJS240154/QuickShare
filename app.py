@@ -31,25 +31,37 @@ def show_qr_gui(url):
     def create_window():
         root = tk.Tk()
         root.title("服务器访问地址")
-
+        
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(url)
         qr.make(fit=True)
         img = qr.make_image(fill='black', back_color='white')
-
+        
         tk_img = ImageTk.PhotoImage(img)
-
+        
         label = tk.Label(root, image=tk_img)
         label.pack()
-
+        
         addr_label = tk.Label(root, text=f"访问地址: {url}")
         addr_label.pack()
-
+        
+        root.update_idletasks()
+        window_width = root.winfo_width()
+        window_height = root.winfo_height()
+        
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        
+        root.geometry(f"+{x}+{y}")
         root.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
         root.mainloop()
 
     thread = threading.Thread(target=create_window, daemon=True)
     thread.start()
+
 
 def allowed_file(filename):
     return True
