@@ -5,7 +5,7 @@ from flask import Flask, request, render_template, send_file, redirect, url_for,
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "your-secret-key-here"  # 建议修改为更安全的密钥
+app.secret_key = "your-secret-key-here"
 
 UPLOAD_FOLDER = "uploads"
 if not os.path.exists(UPLOAD_FOLDER):
