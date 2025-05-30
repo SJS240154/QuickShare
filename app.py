@@ -3,13 +3,9 @@ import time
 import socket
 from flask import Flask, request, render_template, send_file, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
-import qrcode
-from PIL import ImageTk
-import threading
-import tkinter as tk
 
 app = Flask(__name__)
-app.secret_key = "your-secret-key-here"
+app.secret_key = "your-secret-key-here"  # 建议修改为更安全的密钥
 
 UPLOAD_FOLDER = "uploads"
 if not os.path.exists(UPLOAD_FOLDER):
@@ -26,52 +22,13 @@ def get_local_ip():
     except Exception:
         return "127.0.0.1"
 
-
-def show_qr_gui(url):
-    def create_window():
-        root = tk.Tk()
-        root.title("服务器访问地址")
-        
-        screen_width = root.winfo_screenwidth()
-        screen_height = root.winfo_screenheight()
-        
-        qr = qrcode.QRCode(version=1, box_size=10, border=5)
-        qr.add_data(url)
-        qr.make(fit=True)
-        img = qr.make_image(fill='black', back_color='white')
-        
-        tk_img = ImageTk.PhotoImage(img)
-        
-        label = tk.Label(root, image=tk_img)
-        label.pack()
-        
-        addr_label = tk.Label(root, text=f"访问地址: {url}")
-        addr_label.pack()
-        
-        root.update_idletasks()
-        window_width = root.winfo_width()
-        window_height = root.winfo_height()
-        
-        x = (screen_width - window_width) // 2
-        y = (screen_height - window_height) // 2
-        
-        root.geometry(f"+{x}+{y}")
-        root.protocol("WM_DELETE_WINDOW", lambda: root.destroy())
-        root.mainloop()
-
-    thread = threading.Thread(target=create_window, daemon=True)
-    thread.start()
-
-
 def allowed_file(filename):
     return True
-
 
 @app.route("/")
 def index():
     files = os.listdir(app.config["UPLOAD_FOLDER"])
     return render_template("index.html", files=files)
-
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
@@ -114,7 +71,6 @@ def upload_file():
     except Exception as e:
         return jsonify({"success": False, "message": f"上传失败: {str(e)}"}), 500
 
-
 @app.route("/download/<filename>")
 def download_file(filename):
     try:
@@ -144,7 +100,6 @@ def download_file(filename):
     except Exception as e:
         return redirect(url_for("index"))
 
-
 @app.route("/delete/<filename>")
 def delete_file(filename):
     try:
@@ -155,7 +110,6 @@ def delete_file(filename):
         app.logger.error(f"删除文件 {filename} 失败：{str(e)}")
         flash("文件删除失败")
     return redirect(url_for("index"))
-
 
 @app.route("/speed_test", methods=["POST"])
 def speed_test():
@@ -187,14 +141,5 @@ def speed_test():
     except Exception as e:
         return jsonify({"error": str(e), "speed": 0, "unit": "Mbps"})
 
-
 if __name__ == "__main__":
-    host = get_local_ip()
-    port = 80
-    url = f"http://{host}:{port}"
-    
-    show_qr_gui(url)
-
-    app.run(host=host, port=port, debug=True, use_reloader=False)
-
-    
+    app.run(host='0.0.0.0', port=8000)
